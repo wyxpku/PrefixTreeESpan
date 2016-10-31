@@ -180,15 +180,17 @@ if __name__ == '__main__':
 	# espan.trees = espan.trees[:100]
 	inputfile = files[0]
 	print "Dealing with datafile: %s" % (datadir + inputfile)
-	
-	start = time.clock()
 	espan.loaddata(datadir + inputfile)
-	espan.run(100)
-	
+	totalnum = len(espan.trees)
+
+	minsup = int(totalnum * 0.01)
+
+	start = time.clock()
+	espan.run(minsup)
 	end = time.clock()
-	print len(espan.trees)
+
 	print "Programe end in %f seconds." % (end - start)
-	outputfile = open('result/100-' + inputfile, 'w')
+	outputfile = open('result/' + str(minsup) + '-' + inputfile, 'w')
 	for subtree in espan.frequentSubTrees:
 		for i in subtree:
 			outputfile.write(i + ' ')
