@@ -30,6 +30,8 @@ class PrefixTreeESpan:
 			while line[-count] in [' ', '\n']:
 				count += 1
 			# print line[:1-count].split(' ')
+			# print line[:1-count], '---'
+			# print line[:1-count].split(' ')
 			self.trees.append(line[:1-count].split(' '))
 		# print self.trees[-1][-1]
 
@@ -41,7 +43,7 @@ class PrefixTreeESpan:
 		for tree in self.trees:
 			visited = []
 			for label in tree:
-				if label != -1 and label not in visited:
+				if label != '-1' and label not in visited:
 					if label in labelcount.keys():
 						labelcount[label] += 1
 					else:
@@ -53,30 +55,43 @@ class PrefixTreeESpan:
 
 	def initDB(self, label):
 		curdb = []
+		# print 'freqlabel:',label
 		for tree in self.trees:
 			idx = 0
 			while idx < len(tree):
+				# print idx, ':', tree[idx]
 				if tree[idx] == label:
 					idx += 1
 					start = idx
-					expends = 1 # the number of expected end signal ('-1')
-					while expends > 0:
+					deepth = 1 # the number of expected end signal ('-1')
+					while deepth > 0:
+						# print "curdeepth:", deepth
+						# print "idx is", idx, ', node value', tree[idx]
 						if tree[idx] == '-1':
-							expends -= 1
+							deepth -= 1
 						else:
-							expends += 1
+							deepth += 1
 						idx += 1
 					end = idx - 2
+					# print end
 					if end > start:
 						curdb.append(DB(self.trees.index(tree), start, end, label))
 				else:
 					idx += 1
 		self.DBs[myhash([label, '-1'])] = curdb
+		# print myhash([label, '-1'])
+		# for db in curdb:
+		# 	print db.__dict__
 
 	def updateDB(self, freqGE, pattern, oldDB):
+		# print freqGE
+		# print pattern
+		# print '------------------'
 		newDB = []
 		for db in oldDB:
+			# print db.__dict__
 			subtree = self.trees[db.id][db.start : db.end + 1]
+			# print subtree
 			idx  = 0
 			deepth = 0
 			flag = -1
@@ -86,11 +101,12 @@ class PrefixTreeESpan:
 				else:
 					deepth += 1
 				if deepth == 1 and subtree[idx] == freqGE:
-					flag += 1
+					flag = idx + 1
 					break
+				idx += 1
 			if flag != -1:
-				idx = 0
-				deepth = 0
+				idx = flag
+				deepth = 1
 				curdb = []
 				while idx < len(subtree):
 					if subtree[idx] == '-1':
@@ -111,10 +127,13 @@ class PrefixTreeESpan:
 						curdb.append(subtree[idx])
 					idx += 1
 		self.DBs[myhash(pattern)] = newDB
-
 		
 	def run(self, minsup):
 		self.findFrequentLabel(minsup)
+		# print len(self.trees)
+		# for tree in self.trees:
+		# 	print tree
+		# print self.frequentLabels
 		for label in self.frequentLabels:
 			self.initDB(label)
 			pattern = [label, '-1']
@@ -123,8 +142,13 @@ class PrefixTreeESpan:
 
 	def Fre(self, pattern, patternLength, ProDB, minsup):
 		GEs = {}
+		# print "pattern:", pattern
+		# print "pattern len:", patternLength
+		# print "freqGEs:",freqGEs
 		for db in ProDB:
+			# print 'curdb:', db.__dict__
 			subtree = self.trees[db.id][db.start : db.end + 1]
+			# print 'subtree:', subtree
 			deepth = 0
 			tmp_GE = {}
 			for label in subtree:
@@ -132,44 +156,72 @@ class PrefixTreeESpan:
 					deepth -= 1
 				else:
 					deepth += 1
-				if label != -1 and deepth == 1:
-					tmpkey = str(label) + '-' + db.parent
+				# print label, deepth
+				if label != '-1' and deepth == 1:
+					# print label
+					tmpkey = str(label) + '|' + db.parent
+					# print "tmpkey:",tmpkey
 					if tmpkey not in tmp_GE.keys():
 						if tmpkey in GEs.keys():
 							GEs[tmpkey] += 1
 						else:
 							GEs[tmpkey] = 1
 						tmp_GE[tmpkey] = 1
+					# print tmp_GE
+					# print GEs
 		freqGEs = {}
-		for k, v in freqGEs:
-			if v >= minsup:
-				freqGEs[k] = v
-
+		for k in GEs.keys():
+			# print k, v
+			if GEs[k] >= minsup:
+				freqGEs[k] = GEs[k]
+		# print 'freqGEs:', freqGEs
 		for ge in freqGEs:
-			[ge, parent] = ge.split('-')
-			parent = parent.split(',')
+			[ge, parent] = ge.split('|')
+			# parent = parent.split(',')
+			# print 'ge', ge
+			# print 'parent', parent
+
 			deepth = 0
 			newpattern = []
 			for i in range(len(pattern)):
 				curlabel = pattern[i]
-				if label == '-1':
+				if curlabel == '-1':
 					deepth -= 1
 				else:
 					deepth += 1
-				if deepth in [n - 1, n] and label == parent:
-					newpattern = parent[:i+1] + [ge, '-1'] + pattern[i+1:]
+				# print deepth, curlabel, parent
+				if deepth in [patternLength - 1, patternLength] and curlabel == parent:
+					newpattern = pattern[:i+1] + [ge, '-1'] + pattern[i+1:]
+					# print newpattern
 					break
 			if len(newpattern) != 0:
 				self.addResult(newpattern)
 
 			self.updateDB(ge, newpattern, ProDB)
-			self.Fre(newpattern, n + 1, self.DBs[myhash(newpattern)], minsup)
+			self.Fre(newpattern, patternLength + 1, self.DBs[myhash(newpattern)], minsup)
 
 
 if __name__ == '__main__':
 	espan = PrefixTreeESpan()
-	espan.loaddata('treedata/test.data')
-	espan.run(2)
-	for result in espan.frequentSubTrees:
-		print "FREQ:", result
+	# espan.loaddata('treedata/test.data')
+	import time
+	start = time.clock()
+	files = ['CSlog.data', 'D10.data', 'F5.data', 'T1M.data']
+	datadir = 'treedata/'
+	for inputfile in files:
+		espan.loaddata(datadir + inputfile)
+		print "Dealing with datafile: %s" % (datadir + inputfile)
+		
+		start = time.clock()
+		espan.run(5000)
+		end = time.clock()
+
+		print "Programe end in %f seconds." % (end - start)
+		print "Find %d frequent subtrees" % len(espan.frequentSubTrees)
+
+		outputfile = open('result/' + inputfile, 'w')
+		for subtree in espan.frequentSubTrees:
+			for i in subtree:
+				outputfile.write(subtree[i])
+			outputfile.write('\n')
 	# print espan.trees[-1][-1], type(espan.trees[-1][-1])
