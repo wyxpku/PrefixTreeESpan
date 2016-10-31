@@ -208,20 +208,34 @@ if __name__ == '__main__':
 	start = time.clock()
 	files = ['CSlog.data', 'D10.data', 'F5.data', 'T1M.data']
 	datadir = 'treedata/'
-	for inputfile in files:
-		espan.loaddata(datadir + inputfile)
-		print "Dealing with datafile: %s" % (datadir + inputfile)
-		
-		start = time.clock()
-		espan.run(5000)
-		end = time.clock()
+	# espan.trees = espan.trees[:100]
+	inputfile = files[0]
+	print "Dealing with datafile: %s" % (datadir + inputfile)
+	espan.loaddata(datadir + inputfile)
 
-		print "Programe end in %f seconds." % (end - start)
-		print "Find %d frequent subtrees" % len(espan.frequentSubTrees)
+	start = time.clock()
+	espan.run(10000)
+	end = time.clock()
+	print "Programe end in %f seconds." % (end - start)
+	outputfile = open('result/' + inputfile, 'w')
+	for subtree in espan.frequentSubTrees:
+		for i in subtree:
+			outputfile.write(subtree[i])
+		outputfile.write('\n')
+	# for inputfile in files:
+	# 	espan.loaddata(datadir + inputfile)
+	# 	print "Dealing with datafile: %s" % (datadir + inputfile)
+	# 	espan.trees = espan.trees[:100]
+	# 	start = time.clock()
+	# 	espan.run(2)
+	# 	end = time.clock()
 
-		outputfile = open('result/' + inputfile, 'w')
-		for subtree in espan.frequentSubTrees:
-			for i in subtree:
-				outputfile.write(subtree[i])
-			outputfile.write('\n')
-	# print espan.trees[-1][-1], type(espan.trees[-1][-1])
+	# 	espan.clear()
+	# 	print "Programe end in %f seconds." % (end - start)
+	# 	print "Find %d frequent subtrees" % len(espan.frequentSubTrees)
+
+	# 	outputfile = open('result/' + inputfile, 'w')
+	# 	for subtree in espan.frequentSubTrees:
+	# 		for i in subtree:
+	# 			outputfile.write(subtree[i])
+	# 		outputfile.write('\n')
